@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GK THIRD EXAM</title>
+  
+  <!-- Firebase SDK (Google-এর ফ্রি ডাটাবেজ) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+  <style>
+    :root {
+      --bg-color: #f1f5f9;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #cbd5e1;
+      --primary-color: #4f46e5;
+      --primary-hover: #4338ca;
+      --correct-bg: #dcfce7;
+      --correct-border: #22c55e;
+      --correct-text: #15803d;
+      --wrong-bg: #fee2e2;
+      --wrong-border: #ef4444;
+      --wrong-text: #b91c1c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
+    .quiz-card { background: var(--card-bg); width: 100%; max-width: 650px; border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); padding: 32px; }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--border-color); }
+    .progress-text { font-size: 14px; font-weight: 600; color: var(--primary-color); background: rgba(79, 70, 229, 0.1); padding: 6px 14px; border-radius: 20px; }
+    .progress-bar-container { width: 100%; height: 8px; background-color: var(--border-color); border-radius: 10px; margin-bottom: 24px; overflow: hidden; }
+    .progress-bar { height: 100%; background-color: var(--primary-color); width: 0%; transition: width 0.3s ease; }
+    .question-title { font-size: 20px; font-weight: 700; line-height: 1.4; margin-bottom: 20px; }
+    .options-grid { display: flex; flex-direction: column; gap: 12px; }
+    .option-btn { width: 100%; padding: 14px 18px; font-size: 16px; text-align: left; background: transparent; color: var(--text-main); border: 2px solid var(--border-color); border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+    .option-btn:hover:not(:disabled) { border-color: var(--primary-color); background-color: rgba(79, 70, 229, 0.05); }
+    .option-btn.correct { background-color: var(--correct-bg) !important; border-color: var(--correct-border) !important; color: var(--correct-text) !important; font-weight: 600; }
+    .option-btn.wrong { background-color: var(--wrong-bg) !important; border-color: var(--wrong-border) !important; color: var(--wrong-text) !important; font-weight: 600; }
+    .footer-actions { margin-top: 28px; display: flex; justify-content: flex-end; }
+    .next-btn { background-color: var(--primary-color); color: white; border: none; padding: 12px 28px; font-size: 16px; font-weight: 600; border-radius: 8px; cursor: pointer; display: none; }
+    
+    .user-info-screen, .result-screen { text-align: center; display: none; }
+    .user-info-screen input { width: 100%; padding: 12px; font-size: 16px; margin: 15px 0; border: 2px solid var(--border-color); border-radius: 8px; }
+    .start-btn { background-color: var(--primary-color); color: white; border: none; padding: 12px 30px; font-size: 16px; border-radius: 8px; cursor: pointer; }
+    
+    .score-circle { width: 150px; height: 150px; border-radius: 50%; background: rgba(79, 70, 229, 0.1); color: var(--primary-color); display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 20px auto; font-size: 36px; font-weight: 800; }
+    .score-details { display: flex; justify-content: space-around; margin: 20px 0; background: #f8fafc; padding: 16px; border-radius: 10px; border: 1px solid var(--border-color); }
+  </style>
+</head>
+<body>
+
+  <div class="quiz-card">
+    
+    <!-- ১. পরীক্ষার্থীর নাম দেওয়ার স্ক্রিন -->
+    <div id="user-info-view" class="user-info-screen" style="display: block;">
+      <h2>Let's start now</h2>
+      <p style="color: var(--text-muted); margin-top: 5px;">Enter your name</p>
+      <input type="text" id="user-name" placeholder="Enter your name...">
+      <button class="start-btn" onclick="startQuiz()">Start now</button>
+    </div>
+
+    <!-- ২. মূল কুইজ স্ক্রিন -->
+    <div id="quiz-view" style="display: none;">
+      <div class="top-bar">
+        <h2 id="display-name" style="font-size: 16px;"></h2>
+        <span class="progress-text" id="progress-text">Question 1/40</span>
+      </div>
+
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+
+      <div class="question-title" id="question-title">QUESTION LOADING...</div>
+
+      <div class="options-grid" id="options-grid"></div>
+
+      <div class="footer-actions">
+        <button class="next-btn" id="next-btn" onclick="handleNextQuestion()">NEXT QUESTION ➔</button>
+      </div>
+    </div>
+
+    <!-- ৩. রেজাল্ট স্ক্রিন -->
+    <div class="result-screen" id="result-view">
+      <h2>Exam finish!</h2>
+      <p style="color: var(--text-muted)">tumar folafol joma hoise pakhi</p>
+      
+      <div class="score-circle">
+        <div id="final-score">০.০০</div>
+        <span style="font-size: 14px; color: var(--text-muted);">Total score / 40</span>
+      </div>
+
+      <div class="score-details">
+        <div><strong style="color: var(--correct-border); font-size: 20px;" id="correct-count">০</strong><br><small>সঠিক (+1.00)</small></div>
+        <div><strong style="color: var(--wrong-border); font-size: 20px;" id="wrong-count">০</strong><br><small>ভুল (-0.25)</small></div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ⚙️ আপনার ফায়ারবেজ কনফিগারেশন এখানে বসাবেন
+    const firebaseConfig = {
+     apiKey: "AIzaSyCTgSqtcDRtvfbIECDFEv_2jAEgModArXc",
+  authDomain: "gk-exam-2.firebaseapp.com",
+  projectId: "gk-exam-2",
+  storageBucket: "gk-exam-2.firebasestorage.app",
+  messagingSenderId: "52008698353",
+  appId: "1:52008698353:web:08a24e1451711ab72f0450",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ৪০টি প্রশ্ন এবং সঠিক উত্তরের ইনডেক্স (0 থেকে শুরু)
+    const questionsDatabase = [
+      const questions = [
+  // ==================== ইতিহাস (১–২৫) ====================
+  { question: "1. বাংলায় পাল রাজবংশের প্রতিষ্ঠাতা কে ছিলেন?", options: ["ধর্মপাল", "গোপাল", "দেবপাল", "মহীপাল"], correct: 1 },
+  { question: "2. বাংলার সেন রাজবংশের শেষ উল্লেখযোগ্য শাসক কে ছিলেন?", options: ["বিজয় সেন", "বল্লাল সেন", "লক্ষ্মণ সেন", "কেশব সেন"], correct: 2 },
+  { question: "3. ইখতিয়ার উদ্দিন মুহাম্মদ বখতিয়ার খলজি বাংলার কোন স্থান জয় করে সেন শাসনের অবসান ঘটান?", options: ["সোনারগাঁও", "বিক্রমপুর", "নদীয়া", "চট্টগ্রাম"], correct: 2 },
+  { question: "4. বারো ভূঁইয়াদের মধ্যে সবচেয়ে প্রভাবশালী নেতা হিসেবে কে পরিচিত?", options: ["ঈসা খাঁ", "প্রতাপাদিত্য", "কেদার রায়", "মুসা খাঁ"], correct: 0 },
+  { question: "5.  মুঘল আমলে ঢাকার নাম 'জাহাঙ্গীরনগর' রাখেন কে?", options: ["শায়েস্তা খাঁ", "ইসলাম খাঁ", "মীর জুমলা", "সুবাদার কাসিম খাঁ"], correct: 1 },
+  { question: "6. পলাশীর যুদ্ধ সংঘটিত হয়েছিল কোন সালে?", options: ["১৭৫৬", "১৭৫৭", "১৭৬৪", "১৭৬৫"], correct: 1 },
+  { question: "7. বক্সারের যুদ্ধের পর বাংলার ইতিহাসে কোন গুরুত্বপূর্ণ পরিবর্তনের পথ তৈরি হয়?", options: ["দ্বৈত শাসনের অবসান", "ইস্ট ইন্ডিয়া কোম্পানির দেওয়ানি লাভ", "বঙ্গভঙ্গ", "চিরস্থায়ী বন্দোবস্ত বাতিল"], correct: 1 },
+  { question: "8. ফকির-সন্ন্যাসী বিদ্রোহের সঙ্গে কোন নেতার নাম বিশেষভাবে যুক্ত?", options: ["মজনু শাহ", "দুদু মিয়া", "তিতুমীর", "হাজী শরীয়তুল্লাহ"], correct: 0 },
+  { question: "9. বাংলার নবজাগরণের অন্যতম অগ্রদূত হিসেবে কাকে বিবেচনা করা হয়?", options: ["রাজা রামমোহন রায়", "ঈশ্বরচন্দ্র গুপ্ত", "দীনবন্ধু মিত্র", "মীর মশাররফ হোসেন"], correct: 0 },
+  { question: "10. ছয় দফা দাবি উত্থাপিত হয়েছিল কোন সালে?", options: ["১৯৫৪", "১৯৬২", "১৯৬৬", "১৯৬৯"], correct: 2 },
+  { question: "11. আগরতলা ষড়যন্ত্র মামলা দায়ের করা হয়েছিল কোন সালে?", options: ["১৯৬৫", "১৯৬৬", "১৯৬৮", "১৯৭০"], correct: 2 },
+  { question: "12. ঊনসত্তরের গণ-অভ্যুত্থানের অন্যতম শহীদ ছাত্রনেতা কে ছিলেন?", options: ["নূর হোসেন", "আসাদ", "মতিউর রহমান", "শফিউর রহমান"], correct: 1 },
+  { question: "13. মুজিবনগর সরকার আনুষ্ঠানিকভাবে শপথ গ্রহণ করে কবে?", options: ["১০ এপ্রিল ১৯৭১", "১৪ এপ্রিল ১৯৭১", "১৭ এপ্রিল ১৯৭১", "২৬ এপ্রিল ১৯৭১"], correct: 2 },
+  { question: "14. মুজিবনগর সরকারের প্রধানমন্ত্রী কে ছিলেন?", options: ["সৈয়দ নজরুল ইসলাম", "তাজউদ্দীন আহমদ", "এম মনসুর আলী", "খন্দকার মোশতাক আহমদ"], correct: 1 },
+  { question: "15. বঙ্গবন্ধুর ৭ মার্চের ভাষণ UNESCO-এর কোন তালিকায় অন্তর্ভুক্ত হয়?", options: ["বিশ্ব ঐতিহ্য তালিকা", "মেমোরি অব দ্য ওয়ার্ল্ড রেজিস্টার", "অমূর্ত সাংস্কৃতিক ঐতিহ্য তালিকা", "বিশ্ব জীববৈচিত্র্য তালিকা"], correct: 1 },
+  { question: "16. ইউরোপীয় রেনেসাঁর সূচনা প্রধানত কোন দেশে হয়েছিল?", options: ["ফ্রান্স", "ইংল্যান্ড", "ইতালি", "জার্মানি"], correct: 2 },
+  { question: "17. ফরাসি বিপ্লবের সূচনার প্রতীকী ঘটনা হিসেবে কোনটি পরিচিত?", options: ["ওয়াটারলুর যুদ্ধ", "বাস্তিল দুর্গের পতন", "ভার্সাই চুক্তি", "ভিয়েনা কংগ্রেস"], correct: 1 },
+  { question: "18. রুশ বিপ্লব সংঘটিত হয়েছিল কোন সালে?", options: ["১৯০৫", "১৯১৪", "১৯১৭", "১৯২১"], correct: 2 },
+  { question: "19. প্রথম বিশ্বযুদ্ধের পর জার্মানির সঙ্গে কোন চুক্তি স্বাক্ষরিত হয়?", options: ["ট্রায়ানন চুক্তি", "ভার্সাই চুক্তি", "লুজান চুক্তি", "সেভ্র চুক্তি"], correct: 1 },
+  { question: "20. প্রথম বিশ্বযুদ্ধের পর আন্তর্জাতিক শান্তি রক্ষার উদ্দেশ্যে কোন সংস্থা প্রতিষ্ঠিত হয়?", options: ["জাতিসংঘ", "ন্যাটো", "জাতিপুঞ্জ", "ইউরোপীয় ইউনিয়ন"], correct: 2 },
+  { question: "21. কনস্টান্টিনোপল উসমানীয় তুর্কিদের দখলে আসে কোন সালে?", options: ["১২৯৯", "১৩৮৯", "১৪৫৩", "১৫১৭"], correct: 2 },
+  { question: "22. ১৫১৭ সালে মার্টিন লুথারের ৯৫টি থিসিস কোন ঐতিহাসিক আন্দোলনের সঙ্গে যুক্ত?", options: ["শিল্পবিপ্লব", "ধর্মসংস্কার আন্দোলন", "আলোকায়ন আন্দোলন", "সমাজতান্ত্রিক আন্দোলন"], correct: 1 },
+  { question: "23. শিল্পবিপ্লব প্রথম কোন দেশে শুরু হয়েছিল?", options: ["যুক্তরাষ্ট্র", "জার্মানি", "ব্রিটেন", "ফ্রান্স"], correct: 2 },
+  { question: "24. বার্লিন প্রাচীরের পতন ঘটে কোন সালে?", options: ["১৯৮৫", "১৯৮৭", "১৯৮৯", "১৯৯১"], correct: 2 },
+  { question: "25. জোটনিরপেক্ষ আন্দোলনের প্রথম শীর্ষ সম্মেলন কোথায় অনুষ্ঠিত হয়েছিল?", options: ["বান্দুং", "বেলগ্রেড", "কায়রো", "জাকার্তা"], correct: 1 },
+
+  // ==================== সাম্প্রতিক বিষয় (২৬–৫০) ====================
+  { question: "26.২০২৬ FIFA বিশ্বকাপে প্রথমবারের মতো কতটি দল অংশ নেয়?", options: ["৩২", "৩৬", "৪০", "৪৮"], correct: 3 },
+  { question: "27. ২০২৬ FIFA বিশ্বকাপের ফাইনাল অনুষ্ঠিত হয় কোথায়?", options: ["মেক্সিকো সিটি", "লস অ্যাঞ্জেলেস", "নিউইয়র্ক–নিউ জার্সি", "টরন্টো"], correct: 2 },
+  { question: "28.Milano Cortina 2026 শীতকালীন অলিম্পিক কোন মাসে অনুষ্ঠিত হয়?", options: ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল"], correct: 1 },
+  { question: "29.  ২০২৬ সালে ASEAN-এর সভাপতিত্ব কোন দেশের হাতে?", options: ["মালয়েশিয়া", "থাইল্যান্ড", "ফিলিপাইন", "ইন্দোনেশিয়া"], correct: 2 },
+  { question: "30.২০২৬ সালের ৪৮তম ASEAN Summit কোথায় অনুষ্ঠিত হয়েছিল?", options: ["জাকার্তা, ইন্দোনেশিয়া", "সেবু, ফিলিপাইন", "ব্যাংকক, থাইল্যান্ড", "হ্যানয়, ভিয়েতনাম"], correct: 1 },
+  { question: "31. COP30 জলবায়ু সম্মেলন ২০২৫ সালে কোন শহরে অনুষ্ঠিত হয়?", options: ["দুবাই", "বাকু", "বেলেম", "গ্লাসগো"], correct: 2 },
+  { question: "32.  COP30 অনুষ্ঠিত হয়েছিল কোন দেশে?", options: ["ব্রাজিল", "আজারবাইজান", "সংযুক্ত আরব আমিরাত", "দক্ষিণ আফ্রিকা"], correct: 0 },
+  { question: "33.২০২৫ সালের ICC Champions Trophy ক্রিকেট প্রতিযোগিতায় চ্যাম্পিয়ন হয় কোন দল?", options: ["নিউজিল্যান্ড", "ভারত", "অস্ট্রেলিয়া", "দক্ষিণ আফ্রিকা"], correct: 1 },
+  { question: "34. ২০২৫ সালের নোবেল পদার্থবিজ্ঞান পুরস্কার কোন আবিষ্কারের জন্য দেওয়া হয়?", options: ["ধাতব-জৈব কাঠামো", "বৈদ্যুতিক বর্তনীতে ম্যাক্রোস্কোপিক কোয়ান্টাম টানেলিং ও শক্তির কোয়ান্টাইজেশন", "পেরিফেরাল ইমিউন টলারেন্স", "সৃজনশীল ধ্বংসের মাধ্যমে অর্থনৈতিক প্রবৃদ্ধি"], correct: 1 },
+  { question: "35. ২০২৬ সালের নোবেল চিকিৎসাবিজ্ঞান পুরস্কার কোন বিষয়ে আবিষ্কারের জন্য দেওয়া হয়?", options: ["CRISPR জিন সম্পাদনা", "আলোক-নিয়ন্ত্রিত আয়ন চ্যানেল ও অপটোজেনেটিকস", "mRNA টিকা", "স্টেম সেল থেরাপি"], correct: 1 },
+  { question: "36. ২০২৫ সালের নোবেল রসায়ন পুরস্কার কোন বিষয়ের উন্নয়নের জন্য দেওয়া হয়?", options: ["জিন সম্পাদনা", "ধাতব-জৈব কাঠামো (MOFs)", "কৃত্রিম আলোকসংশ্লেষণ", "ন্যানো-সার্কিট"], correct: 1 },
+  { question: "36.২০২৬ সালের অর্থনীতিতে নোবেল পুরস্কার লাভ করেন কারা?", options: ["Amartya Sen ও Esther Duflo", "Robert E. Hall ও Michael Woodford", "Paul Krugman ও Joseph Stiglitz", "Daron Acemoglu ও Simon Johnson"], correct: 1 },
+  { question: "37. বাংলাদেশের নির্বাচন কমিশনের ২০২৬ সালের তথ্য অনুযায়ী নিবন্ধিত রাজনৈতিক দলের সংখ্যা কত ছিল?", options: ["৪০", "৫০", "৬০", "৭০"], correct: 2 },
+  { question: "38. ২০২৬ সালের অর্থনীতিতে নোবেল পুরস্কারপ্রাপ্ত Hall ও Woodford-এর কাজ মূলত কোন বিষয়ের সঙ্গে সম্পর্কিত?", options: ["অর্থনৈতিক মডেল ও সামষ্টিক অর্থনৈতিক স্থিতিশীলতা", "জীববৈচিত্র্য সংরক্ষণ", "আণবিক জীববিজ্ঞান", "প্রাচীন সাহিত্য"], correct: 0 },
+  { question: "39. ২০২৬ সালের নোবেল চিকিৎসাবিজ্ঞান পুরস্কারপ্রাপ্তদের মধ্যে কে ছিলেন?", options: ["Karl Deisseroth", "Francis Halzen", "Anne Carson", "Michael Woodford"], correct: 0 },
+  { question: "40.২০২৬ সালের নোবেল রসায়ন পুরস্কারপ্রাপ্ত Henri Kagan ও Kenso Soai-এর গবেষণা কোন বিষয়ের সঙ্গে সম্পর্কিত?", options: ["মিরর-ইমেজ অণু ও রাসায়নিক বিক্রিয়ার অসমতা", "জলবায়ু পরিবর্তন", "ন্যানো-সার্কিট", "জিন সম্পাদনা"], correct: 0 },
+];
+    let userName = "";
+    let currentQuestionIndex = 0;
+    let totalScore = 0;
+    let correctCount = 0;
+    let wrongCount = 0;
+    let userWrongQuestions = []; 
+
+    function startQuiz() {
+      const nameInput = document.getElementById('user-name').value.trim();
+      if(nameInput === "") {
+        alert("Please enter your name!");
+        return;
+      }
+      userName = nameInput;
+      document.getElementById('display-name').innerText = `শিক্ষার্থী: ${userName}`;
+      document.getElementById('user-info-view').style.display = 'none';
+      document.getElementById('quiz-view').style.display = 'block';
+      loadQuestion();
+    }
+
+    function loadQuestion() {
+      const currentData = questionsDatabase[currentQuestionIndex];
+      document.getElementById('next-btn').style.display = 'none';
+      const optionsGrid = document.getElementById('options-grid');
+      optionsGrid.innerHTML = '';
+
+      document.getElementById('progress-text').innerText = `প্রশ্ন ${currentQuestionIndex + 1}/${questionsDatabase.length}`;
+      document.getElementById('progress-bar').style.width = `${((currentQuestionIndex + 1) / questionsDatabase.length) * 100}%`;
+      document.getElementById('question-title').innerText = currentData.question;
+
+      currentData.options.forEach((option, index) => {
+        const button = document.createElement('button');
+        button.className = 'option-btn';
+        button.innerText = option;
+        button.onclick = () => selectOption(index, button);
+        optionsGrid.appendChild(button);
+      });
+    }
+
+    function selectOption(selectedIndex, selectedBtn) {
+      const currentData = questionsDatabase[currentQuestionIndex];
+      const allButtons = document.querySelectorAll('.option-btn');
+      allButtons.forEach(btn => btn.disabled = true);
+
+      if (selectedIndex === currentData.correct) {
+        selectedBtn.classList.add('correct');
+        totalScore += 1;
+        correctCount++;
+      } else {
+        selectedBtn.classList.add('wrong');
+        allButtons[currentData.correct].classList.add('correct');
+        totalScore -= 0.25;
+        wrongCount++;
+        
+        userWrongQuestions.push({
+          question: currentData.question,
+          selectedAnswer: currentData.options[selectedIndex],
+          correctAnswer: currentData.options[currentData.correct]
+        });
+      }
+
+      document.getElementById('next-btn').style.display = 'block';
+    }
+
+    function handleNextQuestion() {
+      currentQuestionIndex++;
+      if (currentQuestionIndex < questionsDatabase.length) {
+        loadQuestion();
+      } else {
+        submitResultsToDatabase();
+      }
+    }
+
+    function submitResultsToDatabase() {
+      document.getElementById('quiz-view').style.display = 'none';
+      document.getElementById('result-view').style.display = 'block';
+
+      document.getElementById('final-score').innerText = totalScore.toFixed(2);
+      document.getElementById('correct-count').innerText = correctCount;
+      document.getElementById('wrong-count').innerText = wrongCount;
+
+      db.collection("quiz_results 4").add({
+        name: userName,
+        score: totalScore.toFixed(2),
+        correct: correctCount,
+        wrong: wrongCount,
+        wrongQuestions: userWrongQuestions,
+        time: new Date()
+      })
+      .then(() => {
+        console.log("ফলাফল সফলভাবে জমা হয়েছে!");
+      })
+      .catch((error) => {
+        console.error("ডাটা সেভ করতে সমস্যা হয়েছে: ", error);
+      });
+    }
+  </script>
+</body> 
+</html>
