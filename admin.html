@@ -251,7 +251,7 @@
     let allExamData = [];
 
     // ফায়ারবেজ থেকে ডাটা নিয়ে আসা
-    db.collection("quiz_results 3").orderBy("time", "desc").get()
+    db.collection("quiz_results 4").orderBy("time", "desc").get()
     .then((querySnapshot) => {
       if (querySnapshot.empty) {
         resultsContainer.innerHTML = '<p style="text-align:center; padding: 40px; color: var(--text-muted);">এখনও কেউ পরীক্ষা দেয়নি।</p>';
